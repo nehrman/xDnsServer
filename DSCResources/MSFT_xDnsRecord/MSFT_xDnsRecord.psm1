@@ -37,6 +37,11 @@ function Get-TargetResource
         $Target,
 
         [Parameter()]
+        [ValidateSet("True","False")]
+        [System.String]
+        $CreatePTR = 'False',
+
+        [Parameter()]
         [System.String]
         $DnsServer = "localhost",
 
@@ -48,7 +53,7 @@ function Get-TargetResource
 
     Write-Verbose -Message ($LocalizedData.GettingDnsRecordMessage -f $Name, $Type, $Zone, $DnsServer)
     $record = Get-DnsServerResourceRecord -ZoneName $Zone -Name $Name -ComputerName $DnsServer -ErrorAction SilentlyContinue
-    
+
     if ($null -eq $record)
     {
         return @{
@@ -59,11 +64,11 @@ function Get-TargetResource
             Ensure = 'Absent';
         }
     }
-    if ($Type -eq "CName") 
+    if ($Type -eq "CName")
     {
         $recordData = ($record.RecordData.hostnamealias).TrimEnd('.')
     }
-    if ($Type -eq "ARecord") 
+    if ($Type -eq "ARecord")
     {
         $recordData = $record.RecordData.IPv4address.IPAddressToString
     }
@@ -100,6 +105,11 @@ function Set-TargetResource
         $Target,
 
         [Parameter()]
+        [ValidateSet("True","False")]
+        [System.String]
+        $CreatePTR = 'False',
+
+        [Parameter()]
         [System.String]
         $DnsServer = "localhost",
 
@@ -109,14 +119,20 @@ function Set-TargetResource
         $Ensure = 'Present'
     )
 
-    $DNSParameters = @{ Name = $Name; ZoneName = $Zone; ComputerName = $DnsServer; } 
+    $DNSParameters = @{ Name = $Name; ZoneName = $Zone; ComputerName = $DnsServer; }
 
     if ($Ensure -eq 'Present')
     {
-        if ($Type -eq "ARecord")
+        if ($Type -eq "ARecord" -And $CreatePTR -eq "False")
         {
             $DNSParameters.Add('A',$true)
             $DNSParameters.Add('IPv4Address',$target)
+        }
+        if ($Type -eq "ARecord" -And $CreatePTR -eq "True")
+        {
+            $DNSParameters.Add('A',$true)
+            $DNSParameters.Add('IPv4Address',$target)
+            $DNSParameters.Add('CreatePTR',$true)
         }
         if ($Type -eq "CName")
         {
@@ -129,7 +145,7 @@ function Set-TargetResource
     }
     elseif ($Ensure -eq 'Absent')
     {
-        
+
         $DNSParameters.Add('Force',$true)
 
         if ($Type -eq "ARecord")
@@ -167,6 +183,11 @@ function Test-TargetResource
         [Parameter(Mandatory = $true)]
         [System.String]
         $Target,
+
+        [Parameter()]
+        [ValidateSet("True","False")]
+        [System.String]
+        $CreatePTR = 'False',
 
         [Parameter()]
         [System.String]
